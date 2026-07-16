@@ -2,6 +2,7 @@
 
 import logging
 import time
+import datetime
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -60,6 +61,22 @@ class UtilityCog(commands.Cog, name="Utility"):
         else:
             await db.set_system_prompt(interaction.guild_id, prompt)
             await interaction.response.send_message(f"✅ Personality updated:\n> {prompt[:300]}", ephemeral=True)
+
+    @app_commands.command(name="purge", description="Delete Fleet Snowfluff's messages from the last 10 minutes.")
+    @utils.admin_or_master()
+    async def purge_command(self, interaction: discord.Interaction) -> None:
+        await interaction.response.defer(thinking=True, ephemeral=True)
+        try:
+            cutoff = discord.utils.utcnow() - datetime.timedelta(minutes=10)
+            deleted = 0
+            async for msg in interaction.channel.history(limit=200, after=cutoff):
+                if msg.author.id == self.bot.user.id:
+                    await msg.delete()
+                    deleted += 1
+            await interaction.followup.send(f"✅ Purged {deleted} of my messages from the last 10 minutes.", ephemeral=True)
+        except Exception as e:
+            logger.error("Error purging messages: %s", e)
+            await interaction.followup.send("❌ Something went wrong while purging.", ephemeral=True)
 
     # ── /config group ──────────────────────────────────────────────────────
 
