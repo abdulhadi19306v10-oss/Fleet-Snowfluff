@@ -46,6 +46,12 @@ class AemeathCog(commands.Cog, name="Aemeath"):
     @gif_loop.before_loop
     async def before_gif_loop(self):
         await self.bot.wait_until_ready()
+        configs = await db.get_aemeath_configs()
+        now = datetime.now()
+        for cfg in configs:
+            for cid in cfg["channels"]:
+                if cid not in self.last_sent:
+                    self.last_sent[cid] = now
 
     aemeath_group = app_commands.Group(name="aemeath", description="Auto-post random Aemeath GIFs.")
 
