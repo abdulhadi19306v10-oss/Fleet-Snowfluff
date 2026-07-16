@@ -46,25 +46,32 @@ class ChatCog(commands.Cog, name="Chat"):
         if message.author.bot:
             return
 
-        mentioned = self.bot.user in message.mentions
         is_reply = False
+        valid_chat_reply = False
         if message.reference and isinstance(message.reference.resolved, discord.Message):
             res = message.reference.resolved
             if res.author == self.bot.user:
-                # Only trigger on replies to /chat command or natural chat replies (which have a reference)
-                if res.interaction and res.interaction.name == "chat":
-                    is_reply = True
-                elif hasattr(res, "interaction_metadata") and res.interaction_metadata and res.interaction_metadata.name == "chat":
-                    is_reply = True
+                is_reply = True
+                if getattr(res.interaction, "name", None) == "chat":
+                    valid_chat_reply = True
+                elif getattr(res, "interaction_metadata", None) and getattr(res.interaction_metadata, "name", None) == "chat":
+                    valid_chat_reply = True
                 elif res.reference is not None:
-                    is_reply = True
+                    valid_chat_reply = True
+
+        mentioned = self.bot.user in message.mentions
+        
+        # If the mention is just Discord's automatic reply-ping to a non-chat message (like a GIF), ignore it.
+        if is_reply and not valid_chat_reply:
+            if f"<@{self.bot.user.id}>" not in message.content and f"<@!{self.bot.user.id}>" not in message.content:
+                mentioned = False
 
         in_channel = False
         if message.guild:
             cfg = await db.get_guild_config(message.guild.id)
             in_channel = bool(cfg.get("enabled_channels") and message.channel.id in cfg["enabled_channels"])
 
-        if not mentioned and not in_channel and not is_reply:
+        if not mentioned and not in_channel and not valid_chat_reply:
             return
 
         text = message.content.replace(f"<@{self.bot.user.id}>", "").replace(f"<@!{self.bot.user.id}>", "").strip()
