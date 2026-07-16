@@ -45,6 +45,8 @@ class ChatCog(commands.Cog, name="Chat"):
     async def on_message(self, message: discord.Message) -> None:
         if message.author.bot:
             return
+        if not utils.is_admin_or_master(message.author):
+            return
 
         is_reply = False
         valid_chat_reply = False
