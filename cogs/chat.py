@@ -6,6 +6,7 @@ from discord import app_commands
 from discord.ext import commands
 import db
 import gemini_client
+import utils
 
 logger = logging.getLogger("fleet_snowfluff.chat")
 HISTORY_LIMIT = 20
@@ -22,20 +23,20 @@ class ChatCog(commands.Cog, name="Chat"):
 
     @app_commands.command(name="chat", description="Chat with Fleet Snowfluff (Gemini-powered).")
     @app_commands.describe(message="Your message to Fleet Snowfluff")
+    @utils.admin_or_master()
     async def chat_command(self, interaction: discord.Interaction, message: str) -> None:
-        await interaction.response.defer(thinking=True)
+        await interaction.response.defer(thinking=True, ephemeral=False)
         cid = interaction.channel_id
         config = await db.get_guild_config(interaction.guild_id) if interaction.guild_id else {}
         history = await db.get_history(cid, limit=HISTORY_LIMIT)
         reply = await gemini_client.chat(message, history=history, system_prompt=config.get("system_prompt"))
-        await db.add_message(cid, "user", message)
-        await db.add_message(cid, "model", reply)
-        await db.prune_history(cid, keep=HISTORY_LIMIT * 2)
+        await db.save_chat(cid, message, reply)
         logger.info("[/chat] guild=%s channel=%s user=%s", interaction.guild_id, cid, interaction.user)
         for chunk in _chunks(reply):
-            await interaction.followup.send(chunk)
+            await interaction.followup.send(chunk, ephemeral=False)
 
     @app_commands.command(name="clearchat", description="Clear Fleet Snowfluff's memory for this channel.")
+    @utils.admin_or_master()
     async def clearchat_command(self, interaction: discord.Interaction) -> None:
         deleted = await db.clear_history(interaction.channel_id)
         await interaction.response.send_message(f"🧹 Cleared **{deleted}** stored messages.", ephemeral=True)
@@ -46,12 +47,22 @@ class ChatCog(commands.Cog, name="Chat"):
             return
 
         mentioned = self.bot.user in message.mentions
+        is_reply = False
+        if message.reference and isinstance(message.reference.resolved, discord.Message):
+            res = message.reference.resolved
+            if res.author == self.bot.user:
+                is_reply = True
+                if res.interaction and res.interaction.name == "summarize":
+                    is_reply = False
+                elif hasattr(res, "interaction_metadata") and res.interaction_metadata and res.interaction_metadata.name == "summarize":
+                    is_reply = False
+
         in_channel = False
         if message.guild:
             cfg = await db.get_guild_config(message.guild.id)
             in_channel = bool(cfg.get("enabled_channels") and message.channel.id in cfg["enabled_channels"])
 
-        if not mentioned and not in_channel:
+        if not mentioned and not in_channel and not is_reply:
             return
 
         text = message.content.replace(f"<@{self.bot.user.id}>", "").replace(f"<@!{self.bot.user.id}>", "").strip()
@@ -66,9 +77,7 @@ class ChatCog(commands.Cog, name="Chat"):
         async with message.channel.typing():
             reply = await gemini_client.chat(text, history=history, system_prompt=config.get("system_prompt"))
 
-        await db.add_message(message.channel.id, "user", text)
-        await db.add_message(message.channel.id, "model", reply)
-        await db.prune_history(message.channel.id, keep=HISTORY_LIMIT * 2)
+        await db.save_chat(message.channel.id, text, reply)
 
         chunks = _chunks(reply)
         await message.reply(chunks[0])

@@ -6,6 +6,7 @@ from discord import app_commands
 from discord.ext import commands
 import db
 import gemini_client
+import utils
 
 logger = logging.getLogger("fleet_snowfluff.summarize")
 
@@ -16,8 +17,9 @@ class SummarizeCog(commands.Cog, name="Summarize"):
 
     @app_commands.command(name="summarize", description="Summarize the last N messages in this channel.")
     @app_commands.describe(count="Number of recent messages to summarize (2–200)")
+    @utils.admin_or_master()
     async def summarize_command(self, interaction: discord.Interaction, count: app_commands.Range[int, 2, 200] = 50) -> None:
-        await interaction.response.defer(thinking=True)
+        await interaction.response.defer(thinking=True, ephemeral=False)
         logger.info("[/summarize] guild=%s channel=%s count=%d user=%s", interaction.guild_id, interaction.channel_id, count, interaction.user)
 
         lines, total = [], 0
@@ -39,13 +41,7 @@ class SummarizeCog(commands.Cog, name="Summarize"):
         config = await db.get_guild_config(interaction.guild_id) if interaction.guild_id else {}
         summary = await gemini_client.summarize("\n".join(lines), system_prompt=config.get("system_prompt"))
 
-        embed = discord.Embed(
-            title=f"📋 Summary of last {len(lines)} messages",
-            description=summary[:4096],
-            color=discord.Color.blurple(),
-        )
-        embed.set_footer(text=f"Requested by {interaction.user.display_name} • Powered by Gemini")
-        await interaction.followup.send(embed=embed)
+        await interaction.followup.send(summary[:2000], ephemeral=False)
 
 
 async def setup(bot: commands.Bot) -> None:

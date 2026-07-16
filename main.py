@@ -26,17 +26,17 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 logger = logging.getLogger("fleet_snowfluff")
 
-COGS = ["cogs.utility", "cogs.chat", "cogs.summarize"]
+COGS = ["cogs.utility", "cogs.chat", "cogs.summarize", "cogs.aemeath"]
 
 
 class FleetSnowfluff(commands.Bot):
     def __init__(self) -> None:
         intents = discord.Intents.default()
-        intents.message_content = True
-        intents.members = True
+        intents.message_content = True  # required for on_message natural chat
         super().__init__(command_prefix=commands.when_mentioned, intents=intents, help_command=None)
 
     async def setup_hook(self) -> None:
+        self.tree.on_error = self.on_app_command_error
         await db.init_db()
         for cog in COGS:
             try:
@@ -57,6 +57,7 @@ class FleetSnowfluff(commands.Bot):
         msg = {
             app_commands.MissingPermissions:    "🔒 You don't have permission to use this command.",
             app_commands.BotMissingPermissions: "🔒 I'm missing permissions needed to run this command.",
+            app_commands.CheckFailure:          "🔒 You don't have permission to use this command.",
         }.get(type(error), "⚠️ Something went wrong. Please try again.")
 
         if isinstance(error, app_commands.CommandOnCooldown):

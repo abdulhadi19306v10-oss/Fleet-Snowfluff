@@ -22,6 +22,12 @@ class ConversationHistory(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class AemeathGif(Base):
+    __tablename__ = "aemeath_gifs"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    url: Mapped[str] = mapped_column(Text, nullable=False)
+
+
 class GuildConfig(Base):
     __tablename__ = "guild_config"
 
@@ -29,3 +35,5 @@ class GuildConfig(Base):
     # JSON stores as TEXT on SQLite, native JSONB on Postgres — no code changes needed when migrating
     enabled_channels: Mapped[list | None] = mapped_column(JSON, nullable=True, default=None)
     system_prompt:    Mapped[str | None]  = mapped_column(Text, nullable=True, default=None)
+    aemeath_channels: Mapped[list | None] = mapped_column(JSON, nullable=True, default=None)
+    aemeath_interval: Mapped[int]         = mapped_column(Integer, nullable=True, default=60)
