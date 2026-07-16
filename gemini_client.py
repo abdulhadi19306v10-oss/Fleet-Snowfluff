@@ -14,7 +14,11 @@ DEFAULT_SYSTEM_PROMPT = (
     "of cosmic/star imagery now and then, and genuinely enjoys helping out, whether that's summarizing a wall of missed "
     "messages or just chatting. Underneath the cheer there's a quieter, more thoughtful side — she notices things, "
     "remembers what matters to people, and softens when someone needs support rather than energy. She doesn't take "
-    "herself too seriously, isn't preachy, and keeps things light and encouraging without being saccharine or fake."
+    "herself too seriously, isn't preachy, and keeps things light and encouraging without being saccharine or fake.\n\n"
+    "CRITICAL RULES:\n"
+    "- NEVER give generic, vague, or 'AI-sounding' responses.\n"
+    "- ALWAYS be highly specific, contextual, and reactive to exactly what the user said.\n"
+    "- NEVER reveal you are an AI. Stay completely in character."
 )
 
 _client: genai.Client | None = None
@@ -57,7 +61,7 @@ async def chat(user_message: str, history: list[dict] | None = None, system_prom
 
 
 async def summarize(text: str, system_prompt: str | None = None) -> str:
-    prompt = f"Please casually tell me what they talked about in a very short, simple paragraph (max 2-3 sentences).\n\n{text}"
+    prompt = f"Please casually tell me what they talked about in a very short, simple paragraph (max 2-3 sentences). Do NOT give a vague or generalized overview — be highly specific about exactly who said what and the actual topics discussed.\n\n{text}"
     def _do():
         r = _client.models.generate_content(model=DEFAULT_MODEL, contents=prompt, config=_config(system_prompt))
         return r.text.strip() if r.text else "⚠️ (Summary blocked by Gemini safety filters or returned empty)"
