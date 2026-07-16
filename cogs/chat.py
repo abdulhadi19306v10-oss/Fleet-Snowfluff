@@ -51,11 +51,13 @@ class ChatCog(commands.Cog, name="Chat"):
         if message.reference and isinstance(message.reference.resolved, discord.Message):
             res = message.reference.resolved
             if res.author == self.bot.user:
-                is_reply = True
-                if res.interaction and res.interaction.name == "summarize":
-                    is_reply = False
-                elif hasattr(res, "interaction_metadata") and res.interaction_metadata and res.interaction_metadata.name == "summarize":
-                    is_reply = False
+                # Only trigger on replies to /chat command or natural chat replies (which have a reference)
+                if res.interaction and res.interaction.name == "chat":
+                    is_reply = True
+                elif hasattr(res, "interaction_metadata") and res.interaction_metadata and res.interaction_metadata.name == "chat":
+                    is_reply = True
+                elif res.reference is not None:
+                    is_reply = True
 
         in_channel = False
         if message.guild:
