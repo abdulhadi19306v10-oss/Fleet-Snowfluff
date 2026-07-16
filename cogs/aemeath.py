@@ -58,8 +58,11 @@ class AemeathCog(commands.Cog, name="Aemeath"):
     @aemeath_group.command(name="addgif", description="Add a GIF URL to the global Aemeath pool.")
     @utils.admin_or_master()
     async def addgif_command(self, interaction: discord.Interaction, url: str) -> None:
-        await db.add_aemeath_gif(url)
-        await interaction.response.send_message(f"✅ GIF added globally!\n{url}", ephemeral=True)
+        added = await db.add_aemeath_gif(url)
+        if added:
+            await interaction.response.send_message(f"✅ GIF added globally!\n{url}", ephemeral=True)
+        else:
+            await interaction.response.send_message(f"⚠️ This GIF is already in the pool!", ephemeral=True)
 
     @aemeath_group.command(name="setchannel", description="Enable auto-GIFs in this channel.")
     @app_commands.describe(channel="Channel to enable")

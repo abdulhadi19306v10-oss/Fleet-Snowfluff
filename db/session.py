@@ -113,10 +113,14 @@ async def get_aemeath_configs() -> list[dict]:
         return [{"guild_id": r.guild_id, "channels": r.aemeath_channels or [], "interval": r.aemeath_interval or 60} for r in rows]
 
 
-async def add_aemeath_gif(url: str) -> None:
+async def add_aemeath_gif(url: str) -> bool:
     async with _Session() as s:
+        existing = (await s.execute(select(AemeathGif).where(AemeathGif.url == url))).scalars().first()
+        if existing:
+            return False
         s.add(AemeathGif(url=url))
         await s.commit()
+        return True
 
 
 async def get_all_aemeath_gifs() -> list[str]:
