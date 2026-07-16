@@ -57,7 +57,7 @@ async def chat(user_message: str, history: list[dict] | None = None, system_prom
 
 
 async def summarize(text: str, system_prompt: str | None = None) -> str:
-    prompt = f"Please casually tell me what they talked about in a simple paragraph.\n\n{text}"
+    prompt = f"Please casually tell me what they talked about in a very short, simple paragraph (max 2-3 sentences).\n\n{text}"
     def _do():
         r = _client.models.generate_content(model=DEFAULT_MODEL, contents=prompt, config=_config(system_prompt))
         return r.text.strip() if r.text else "⚠️ (Summary blocked by Gemini safety filters or returned empty)"
